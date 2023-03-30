@@ -23,13 +23,18 @@
 
 # %%
 from datetime import datetime
+from dotenv import load_dotenv
 from fredapi import Fred
 from IPython.display import display, clear_output
 import ipywidgets as widgets
 import matplotlib.pyplot as plt
+import os
 import pandas as pd
 import seaborn as sns
 from sklearn.linear_model import LinearRegression
+
+load_dotenv()
+FRED_API_KEY = os.getenv("FRED_API_KEY")
 
 plt.rcParams['figure.figsize'] = [8.0, 6.0]
 
@@ -40,6 +45,8 @@ def addRecessions(graph):
         start, end = period
         graph.axvspan(start, end,facecolor='gray', alpha=0.2)
 
+
+# %%
 
 # %%
 # Grab our UMI data, format, and describe
@@ -77,7 +84,7 @@ macro_data.set_index('date', inplace=True)
 # Pull in a bunch of data from the FRED API to build out a UMI + macro data set
 # To see what each series is, check out https://fred.stlouisfed.org/
 
-fred = Fred(api_key='4a91dc45a43af56a8722fc09df954fa1') #TODO: move API key out of code
+fred = Fred(api_key=FRED_API_KEY)
 fred_series = ['PSAVERT', 'CORESTICKM159SFRBATL', 'MEDCPIM158SFRBCLE', 'UNRATE', 'FEDFUNDS', 'T10Y2YM']
 for series in fred_series:
     data = fred.get_series(series)
