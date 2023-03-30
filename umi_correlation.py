@@ -22,10 +22,14 @@
 # Grab and format the data in the CSV file and give a few quick view of the data.
 
 # %%
+from datetime import datetime
+from fredapi import Fred
+from IPython.display import display, clear_output
+import ipywidgets as widgets
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-from datetime import datetime
+from sklearn.linear_model import LinearRegression
 
 plt.rcParams['figure.figsize'] = [8.0, 6.0]
 
@@ -72,7 +76,7 @@ macro_data.set_index('date', inplace=True)
 
 # Pull in a bunch of data from the FRED API to build out a UMI + macro data set
 # To see what each series is, check out https://fred.stlouisfed.org/
-from fredapi import Fred
+
 fred = Fred(api_key='4a91dc45a43af56a8722fc09df954fa1') #TODO: move API key out of code
 fred_series = ['PSAVERT', 'CORESTICKM159SFRBATL', 'MEDCPIM158SFRBCLE', 'UNRATE', 'FEDFUNDS', 'T10Y2YM']
 for series in fred_series:
@@ -98,7 +102,6 @@ display(correlation)
 
 # %%
 # let's try to predict UMI using a logistic regression model and our macro data
-from sklearn.linear_model import LinearRegression
 
 # fill in NaN values with the previous value
 train_data = macro_data.fillna(method='ffill')
@@ -133,9 +136,6 @@ addRecessions(graph)
 # We can also use the UMI correlation model we built above to make predictions about what the UMI value might be in the future under circumstancs defined by values of those macro variables. *It is important to remember that this model is a trained with data from a limited number of macroeconomic environments - and it may not hold up as well in future macroeconomic environments. It should also be noted that many of these variabels are highly correlated, so while the model may make predictions on any value for each variable - some of those combinations may not make sense in the real world.*
 
 # %%
-import ipywidgets as widgets
-from IPython.display import display, clear_output
-
 macro_predictions = macro_data.drop('umi', axis=1).fillna(method='ffill').tail(1)
 macro_variables = macro_predictions.columns
 
