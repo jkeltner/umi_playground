@@ -47,8 +47,6 @@ def addRecessions(graph):
 
 
 # %%
-
-# %%
 # Grab our UMI data, format, and describe
 umi_data = pd.read_csv('data/umi.csv')
 def convert_date(date_str):
@@ -163,3 +161,5 @@ for variable in macro_variables:
 
 display(output)
 
+
+# %%
