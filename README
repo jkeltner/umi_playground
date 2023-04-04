@@ -1,0 +1,13 @@
+Welcome to this small Python site to evaluate the Upstart Macro Index (UMI)
+and some of the macro variables it correlates to.
+
+This repository contains the following files:
+umi_correlation.ipynb - Jupyter notebook with the code to evaluate the UMI
+LICENSE - MIT License we released this repository under
+data/umi.csv - Data file as downloaded from Upstart's website
+README - This file
+
+You will need to add a file named '.env' and set the variable 
+FRED_API_KEY to your FRED API key. If you don't have one, you can get one here:
+https://fred.stlouisfed.org/docs/api/api_key.html . To learn more about loading
+environment variables into python, please see https://pypi.org/project/python-dotenv/.
