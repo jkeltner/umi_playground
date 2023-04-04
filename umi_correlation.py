@@ -36,6 +36,8 @@ from sklearn.linear_model import LinearRegression
 load_dotenv()
 FRED_API_KEY = os.getenv("FRED_API_KEY")
 
+UPSTART_TEAL = '#00b1ac'
+
 plt.rcParams['figure.figsize'] = [8.0, 6.0]
 
 # function to add gray recession bars to a seaborn plot
@@ -57,12 +59,12 @@ umi_data.describe()
 
 
 # %%
-# for those who prefer a visiual look...
-sns.boxplot(y='umi', data=umi_data, color="teal")
+# for those who prefer a visual look...
+sns.boxplot(y='umi', data=umi_data, color=UPSTART_TEAL)
 
 # %%
 # Quick graph of UMI over time
-graph = sns.lineplot(data=umi_data, x='date', y='umi', color="teal") # draw the UMI line
+graph = sns.lineplot(data=umi_data, x='date', y='umi', color=UPSTART_TEAL) # draw the UMI line
 x_ticks = umi_data['date'][::3] # include every 3rd month == quarters
 graph.set(xticks=x_ticks)
 graph.set_xticklabels(graph.get_xticklabels(), rotation=90) # set the labels and rotate 90 degrees
@@ -80,7 +82,9 @@ macro_data = umi_data.copy()
 macro_data.set_index('date', inplace=True)
 
 # Pull in a bunch of data from the FRED API to build out a UMI + macro data set
-# To see what each series is, check out https://fred.stlouisfed.org/
+# To see what each series is check out https://fred.stlouisfed.org/ or 
+#   use fred.get_series_info() -- e.g. fred.get_series_info('PSAVERT') or fred.get_series_info('UNRATE')
+# You can also use fred.search() to discover new series -- e.g. fred.search('unemployment') or fred.search('savings')
 
 fred = Fred(api_key=FRED_API_KEY)
 fred_series = ['PSAVERT', 'CORESTICKM159SFRBATL', 'MEDCPIM158SFRBCLE', 'UNRATE', 'FEDFUNDS', 'T10Y2YM']
@@ -106,7 +110,7 @@ display(correlation)
 # Now that we have the basic macro variables and have looked at the correlation factors, let's see if we can build a correlation model that predicts UMI based on these variables.
 
 # %%
-# let's try to predict UMI using a logistic regression model and our macro data
+# let's try to predict UMI using a linear regression model and our macro data
 
 # fill in NaN values with the previous value
 train_data = macro_data.fillna(method='ffill')
@@ -126,7 +130,7 @@ model_predictions = corr_model.predict(X)
 # %%
 prediction_data = umi_data.copy()
 prediction_data['umi_preds'] = model_predictions
-graph = sns.lineplot(data=prediction_data, x='date', y='umi', color="teal", label="UMI") # draw the UMI line
+graph = sns.lineplot(data=prediction_data, x='date', y='umi', color=UPSTART_TEAL, label="UMI") # draw the UMI line
 sns.lineplot(data=prediction_data, x='date', y='umi_preds', color="orange", linestyle='--', label="Correlation Model") # draw the UMI predictions line
 graph.axhline(1.0, color="gray") # add a grey line at UMI of 1.0
 x_ticks = umi_data['date'][::3] # include every 3rd month == quarters
@@ -161,5 +165,7 @@ for variable in macro_variables:
 
 display(output)
 
+
+# %%
 
 # %%
