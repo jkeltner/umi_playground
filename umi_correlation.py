@@ -22,23 +22,20 @@
 # Grab and format the data in the CSV file and give a few quick view of the data.
 
 # %%
-from datetime import datetime
-from dotenv import load_dotenv
-from fredapi import Fred
-from IPython.display import display, clear_output
-import ipywidgets as widgets
-import matplotlib.pyplot as plt
-import os
 import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
+from datetime import datetime
+import ipywidgets as widgets
+from IPython.display import display, clear_output
 from sklearn.linear_model import LinearRegression
 
-load_dotenv()
-FRED_API_KEY = os.getenv("FRED_API_KEY")
-
+# use the official Upstart teal!
 UPSTART_TEAL = '#00b1ac'
 
+# setting up some plot size and dpi for nice graphics
 plt.rcParams['figure.figsize'] = [8.0, 6.0]
+plt.rcParams['figure.dpi'] = 300
 
 # function to add gray recession bars to a seaborn plot
 def addRecessions(graph):
@@ -50,16 +47,12 @@ def addRecessions(graph):
 
 # %%
 # Grab our UMI data, format, and describe
-umi_data = pd.read_csv('data/umi.csv')
-def convert_date(date_str):
-    date = datetime.strptime(date_str, '%b \'%y')
-    return date.strftime('%Y-%m')
-umi_data['date'] = umi_data['date'].apply(convert_date) # convert dates into a more format that will sort properly
+umi_data = pd.read_csv('data/umi_data.csv')
 umi_data.describe()
 
 
 # %%
-# for those who prefer a visual look...
+# for those who prefer a visiual look...
 sns.boxplot(y='umi', data=umi_data, color=UPSTART_TEAL)
 
 # %%
@@ -73,45 +66,40 @@ addRecessions(graph)
 
 
 # %% [markdown]
-# ## Public Data Downloads
-# Now we're going to download some data on the macro environment during these same time periods and see how they may or may not relate to UMI.
+# ## Macro Data Correlations
+# Now we want to look at the correlation between UMI and some data about the state of the macroeconomic environment.
 
 # %%
 # make a copy of the UMI data and start pulling in all of our fun data sources!
-macro_data = umi_data.copy()
-macro_data.set_index('date', inplace=True)
-
-# Pull in a bunch of data from the FRED API to build out a UMI + macro data set
-# To see what each series is check out https://fred.stlouisfed.org/ or 
-#   use fred.get_series_info() -- e.g. fred.get_series_info('PSAVERT') or fred.get_series_info('UNRATE')
-# You can also use fred.search() to discover new series -- e.g. fred.search('unemployment') or fred.search('savings')
-
-fred = Fred(api_key=FRED_API_KEY)
-fred_series = ['PSAVERT', 'CORESTICKM159SFRBATL', 'MEDCPIM158SFRBCLE', 'UNRATE', 'FEDFUNDS', 'T10Y2YM']
-for series in fred_series:
-    data = fred.get_series(series)
-    data.index = data.index.strftime('%Y-%m')
-    data.name = series
-    data = pd.DataFrame(data)
-    # data[series+"_pct_change"] = data.pct_change() # add M|M change of each variable to our data set as well
-    macro_data = macro_data.join(data)
+# if you want to see the source of this data, check out the data_processing notebook
+macro_data = pd.read_csv('data/macro_data.csv')
 
 # let's check out the basic correlation of UMI with other macro data 
-correlation = macro_data.corr()
+correlation = macro_data.corr(numeric_only=True)
 # goign to sort these by largest absolute value of correlation
 correlation['umi_abs'] = correlation['umi'].abs()
 correlation.sort_values(by='umi_abs', ascending=False, inplace=True)
 correlation.drop('umi_abs', axis=1, inplace=True)
-# it's also to notice how correlated some of these macro data points are with each other
-display(correlation)
+sorted_index = correlation.index
+correlation = correlation.reindex(columns=sorted_index)
+# easier to view this as a heatmap
+graph = sns.heatmap(
+    correlation, 
+    vmin=-1, vmax=1, center=0,
+    cmap=sns.diverging_palette(20, 220, n=200),
+    square=True
+)
+graph.set_xticklabels(
+    graph.get_xticklabels(),
+    rotation=45,
+    horizontalalignment='right'
+)
 
 # %% [markdown]
 # ## Correlation Model
 # Now that we have the basic macro variables and have looked at the correlation factors, let's see if we can build a correlation model that predicts UMI based on these variables.
 
 # %%
-# let's try to predict UMI using a linear regression model and our macro data
-
 # fill in NaN values with the previous value
 train_data = macro_data.fillna(method='ffill')
 
@@ -121,6 +109,7 @@ corr_model = LinearRegression()
 X = train_data.drop('umi', axis=1)
 y = train_data['umi']
 
+X.tail()
 # Fit the model to the entire data set
 corr_model.fit(X, y)
 
@@ -128,6 +117,7 @@ corr_model.fit(X, y)
 model_predictions = corr_model.predict(X)
 
 # %%
+# now we just need to ad the model's predicted values to our UMI chart to see how it does!
 prediction_data = umi_data.copy()
 prediction_data['umi_preds'] = model_predictions
 graph = sns.lineplot(data=prediction_data, x='date', y='umi', color=UPSTART_TEAL, label="UMI") # draw the UMI line
@@ -145,7 +135,7 @@ addRecessions(graph)
 # We can also use the UMI correlation model we built above to make predictions about what the UMI value might be in the future under circumstancs defined by values of those macro variables. *It is important to remember that this model is a trained with data from a limited number of macroeconomic environments - and it may not hold up as well in future macroeconomic environments. It should also be noted that many of these variabels are highly correlated, so while the model may make predictions on any value for each variable - some of those combinations may not make sense in the real world.*
 
 # %%
-macro_predictions = macro_data.drop('umi', axis=1).fillna(method='ffill').tail(1)
+macro_predictions = macro_data.drop('umi', axis=1).fillna(method='ffill').tail(1).reset_index(drop=True)
 macro_variables = macro_predictions.columns
 
 output = widgets.Output()
@@ -156,16 +146,15 @@ def update_variable(change, variable):
         umi_predictions = corr_model.predict(macro_predictions)
         result = umi_predictions[0]
         clear_output(wait=True)
-        display(f'UMI Prediction: {result:.2f}')
+        display(f'Correlation Model Output: {result:.2f}')
 
 for variable in macro_variables:
     w = widgets.FloatText(value=macro_predictions[variable][0], description=variable)
     w.observe(lambda change, variable=variable: update_variable(change, variable=variable), names='value')
     display(w)
-
+    
 display(output)
 
 
-# %%
 
 # %%
