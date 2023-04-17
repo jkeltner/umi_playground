@@ -23,6 +23,7 @@
 
 # %%
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
@@ -64,6 +65,39 @@ graph.set_xticklabels(graph.get_xticklabels(), rotation=90) # set the labels and
 graph.axhline(1.0, color="gray") # add a grey line at UMI of 1.0
 addRecessions(graph)
 
+
+# %% [markdown]
+# ## Simple Time Series Predictions
+# Going to build a simple ARIMA model to do time series predictions and forecast the next 1 month UMI.
+
+# %%
+from statsmodels.tsa.arima.model import ARIMA
+
+arima_data = umi_data['umi']
+# define model
+arima_model = ARIMA(arima_data, order=(1, 1, 1))
+#train model
+arima_model_fit = arima_model.fit()
+# make predictions
+model_predictions = arima_model_fit.predict(start=0, end=len(arima_data))
+
+# %%
+#let's graph our ARIMA model data
+prediction_data = umi_data.copy()
+prediction_data['arima'] = model_predictions
+prediction_data['arima'].iloc[0] = np.nan # set the first value to NaN
+graph = sns.lineplot(data=prediction_data, x='date', y='umi', color=UPSTART_TEAL, label="UMI") # draw the UMI line
+sns.lineplot(data=prediction_data, x='date', y='arima', color="orange", linestyle='--', label="ARIMA Model") # draw the UMI predictions line
+graph.axhline(1.0, color="gray") # add a grey line at UMI of 1.0
+x_ticks = umi_data['date'][::3] # include every 3rd month == quarters
+graph.set(xticks=x_ticks)
+graph.set_xticklabels(graph.get_xticklabels(), rotation=90) # set the labels and rotate 90 degrees
+graph.legend()
+addRecessions(graph)
+
+# %%
+# print out the final value as next month's prediction
+print('Next month UMI ARIMA prediction: ', model_predictions[len(model_predictions)-1])
 
 # %% [markdown]
 # ## Macro Data Correlations
