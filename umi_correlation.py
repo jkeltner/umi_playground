@@ -176,7 +176,9 @@ output = widgets.Output()
 
 def update_variable(change, variable):
     with output:
-        macro_predictions[variable][0] = change.new
+        # use loc to avoid chained assignment which can lead to
+        # pandas warnings and unexpected behavior
+        macro_predictions.loc[0, variable] = change.new
         umi_predictions = corr_model.predict(macro_predictions)
         result = umi_predictions[0]
         clear_output(wait=True)
